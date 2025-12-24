@@ -5,7 +5,6 @@
 go run cmd/main.go
 ```
 
-
 ## Запуск тестов
 ```
 go test -v ./internal/test/
