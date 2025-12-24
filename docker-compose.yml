@@ -1,0 +1,49 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    environment:
+      - DB_HOST=db
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=walletdb
+      - DB_PORT=5432
+      - SERVER_PORT=8080
+      - K6_OUT=influxdb=http://influxdb:8086/k6
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: walletdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  load-test:
+    image: grafana/k6:0.53.0 # актуальная версия на 2025
+    volumes:
+      - ./loadtest:/loadtest # монтируем папку с тестами
+    depends_on:
+      - app
+    command:
+      ["run", "/loadtest/wallet-stress.js"]
+      # Запускается только при явном вызове: docker-compose run load-test
+  influxdb:
+    image: influxdb:1.8
+    ports: ["8086:8086"]
+    environment:
+      - INFLUXDB_DB=k6
+
+  grafana:
+    image: grafana/grafana
+    ports: ["3000:3000"]
+    environment:
+      - GF_INSTALL_PLUGINS=grafana-clock-panel
+volumes:
+  postgres_data:
