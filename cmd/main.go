@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 	"wallet-service/internal/handler"
@@ -18,10 +19,15 @@ func main() {
 		log.Fatal("No .env file found")
 	}
 
-	database.ConnectDB()
-	repository.InitSchema()
+	db := database.ConnectDB()
 
-	walletService := service.NewWalletService(database.DB)
+	walletRepo := repository.NewGormWalletRepository(db)
+
+	if err := walletRepo.AutoMigrate(context.Background()); err != nil {
+		log.Fatal("Failed to migrate database:", err)
+	}
+
+	walletService := service.NewWalletService(walletRepo)
 	walletHandler := handler.NewWalletHandler(walletService)
 
 	r := gin.Default()

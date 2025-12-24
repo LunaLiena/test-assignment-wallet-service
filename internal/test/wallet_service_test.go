@@ -4,7 +4,8 @@ import (
 	"context"
 	"testing"
 	"time"
-	"wallet-service/internal/entities"
+	"wallet-service/internal/model"
+	"wallet-service/internal/repository"
 	"wallet-service/internal/service"
 
 	"github.com/stretchr/testify/assert"
@@ -52,7 +53,7 @@ func setupTestDB(t *testing.T) *gorm.DB {
 		t.Fatal(err)
 	}
 
-	if err := db.AutoMigrate(&entities.Wallet{}); err != nil {
+	if err := db.AutoMigrate(&model.Wallet{}); err != nil {
 		t.Fatal("Failed to migrate test database:", err)
 	}
 
@@ -61,45 +62,42 @@ func setupTestDB(t *testing.T) *gorm.DB {
 
 func TestWalletService_Deposit(t *testing.T) {
 	db := setupTestDB(t)
-	service := service.NewWalletService(db)
+	repo := repository.NewGormWalletRepository(db)
+	service := service.NewWalletService(repo)
 
 	walletId := "550e8400-e29b-41d4-a716-446655440000"
 
-	// 🔥 Добавьте инициализацию кошелька
-	err := service.CreateWallet(walletId)
+	err := service.CreateWallet(context.Background(), walletId)
 	assert.NoError(t, err)
 
 	amount := 1000.0
-	err = service.Deposit(walletId, amount)
+	err = service.Deposit(context.Background(), walletId, amount)
 	assert.NoError(t, err)
 
-	balance, err := service.GetBalance(walletId)
+	balance, err := service.GetBalance(context.Background(), walletId)
 	assert.NoError(t, err)
 	assert.Equal(t, amount, balance)
 }
 
 func TestWalletService_Withdraw(t *testing.T) {
 	db := setupTestDB(t)
-	service := service.NewWalletService(db)
+	repo := repository.NewGormWalletRepository(db)
+	service := service.NewWalletService(repo)
 
 	walletID := "550e8400-e29b-41d4-a716-446655440001"
 	depositAmount := 1000.0
 	withdrawAmount := 300.0
 
-	// 🔥 Обязательно создаём кошелек перед первой операцией
-	err := service.CreateWallet(walletID)
+	err := service.CreateWallet(context.Background(), walletID)
 	assert.NoError(t, err)
 
-	// Сначала депозит
-	err = service.Deposit(walletID, depositAmount)
+	err = service.Deposit(context.Background(), walletID, depositAmount)
 	assert.NoError(t, err)
 
-	// Затем списание
-	err = service.WithDraw(walletID, withdrawAmount)
+	err = service.WithDraw(context.Background(), walletID, withdrawAmount)
 	assert.NoError(t, err)
 
-	// Проверяем баланс
-	balance, err := service.GetBalance(walletID)
+	balance, err := service.GetBalance(context.Background(), walletID)
 	assert.NoError(t, err)
 	assert.Equal(t, depositAmount-withdrawAmount, balance)
 }

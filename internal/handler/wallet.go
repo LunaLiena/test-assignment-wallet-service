@@ -26,7 +26,7 @@ func (h *WalletHandler) InitWallet(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.CreateWallet(req.WalletID); err != nil {
+	if err := h.service.CreateWallet(c.Request.Context(), req.WalletID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 	}
 
@@ -44,12 +44,13 @@ func (h *WalletHandler) HandleWalletOperation(c *gin.Context) {
 	}
 
 	var err error
+	ctx := c.Request.Context()
 
 	switch req.OperationType {
 	case "DEPOSIT":
-		err = h.service.Deposit(req.ID, req.Amount)
+		err = h.service.Deposit(ctx, req.ID, req.Amount)
 	case "WITHDRAW":
-		err = h.service.WithDraw(req.ID, req.Amount)
+		err = h.service.WithDraw(ctx, req.ID, req.Amount)
 	default:
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "invalid operation type",
@@ -69,7 +70,7 @@ func (h *WalletHandler) HandleWalletOperation(c *gin.Context) {
 func (h *WalletHandler) GetWalletBalance(c *gin.Context) {
 	id := c.Param("id")
 
-	balance, err := h.service.GetBalance(id)
+	balance, err := h.service.GetBalance(c.Request.Context(), id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
